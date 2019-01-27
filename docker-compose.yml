@@ -1,7 +1,7 @@
-version: '2'
+version: '3.5'
 
 services:
-  redis:
+  gitlab_redis:
     restart: always
     image: sameersbn/redis:4.0.9-1
     command:
@@ -9,9 +9,11 @@ services:
     volumes:
     - /srv/docker/gitlab/redis:/var/lib/redis:Z
 
-  postgresql:
+  gitlab_postgresql:
     restart: always
     image: sameersbn/postgresql:10
+    ports:
+    - 5432:5432
     volumes:
     - /srv/docker/gitlab/postgresql:/var/lib/postgresql:Z
     environment:
@@ -24,8 +26,8 @@ services:
     restart: always
     image: sameersbn/gitlab:11.6.5
     depends_on:
-    - redis
-    - postgresql
+    - gitlab_redis
+    - gitlab_postgresql
     ports:
     - "10080:80"
     - "10022:22"
@@ -35,38 +37,38 @@ services:
     - DEBUG=false
 
     - DB_ADAPTER=postgresql
-    - DB_HOST=postgresql
+    - DB_HOST=gitlab_postgresql
     - DB_PORT=5432
     - DB_USER=gitlab
     - DB_PASS=password
     - DB_NAME=gitlabhq_production
 
-    - REDIS_HOST=redis
+    - REDIS_HOST=gitlab_redis
     - REDIS_PORT=6379
 
-    - TZ=Asia/Kolkata
-    - GITLAB_TIMEZONE=Kolkata
+    - TZ=Asia/Tokyo
+    - GITLAB_TIMEZONE=Tokyo
 
     - GITLAB_HTTPS=false
     - SSL_SELF_SIGNED=false
 
-    - GITLAB_HOST=localhost
+    - GITLAB_HOST=www.yuimarl.jp
     - GITLAB_PORT=10080
     - GITLAB_SSH_PORT=10022
     - GITLAB_RELATIVE_URL_ROOT=
-    - GITLAB_SECRETS_DB_KEY_BASE=long-and-random-alphanumeric-string
-    - GITLAB_SECRETS_SECRET_KEY_BASE=long-and-random-alphanumeric-string
-    - GITLAB_SECRETS_OTP_KEY_BASE=long-and-random-alphanumeric-string
+    - GITLAB_SECRETS_DB_KEY_BASE=CRxb3HwspLvJrHnJpxFNrFWsb7PLgKhmdhtHhmcH49TkWwjqkHmFzxqbd9rmnxwC
+    - GITLAB_SECRETS_SECRET_KEY_BASE=CRxb3HwspLvJrHnJpxFNrFWsb7PLgKhmdhtHhmcH49TkWwjqkHmFzxqbd9rmnxwC
+    - GITLAB_SECRETS_OTP_KEY_BASE=CRxb3HwspLvJrHnJpxFNrFWsb7PLgKhmdhtHhmcH49TkWwjqkHmFzxqbd9rmnxwC
 
-    - GITLAB_ROOT_PASSWORD=
-    - GITLAB_ROOT_EMAIL=
+    - GITLAB_ROOT_PASSWORD=adminadmin
+    - GITLAB_ROOT_EMAIL=mnitta220@gmail.com
 
     - GITLAB_NOTIFY_ON_BROKEN_BUILDS=true
     - GITLAB_NOTIFY_PUSHER=false
 
-    - GITLAB_EMAIL=notifications@example.com
-    - GITLAB_EMAIL_REPLY_TO=noreply@example.com
-    - GITLAB_INCOMING_EMAIL_ADDRESS=reply@example.com
+    - GITLAB_EMAIL=mnitta220@gmail.com
+    - GITLAB_EMAIL_REPLY_TO=mnitta220@gmail.com
+    - GITLAB_INCOMING_EMAIL_ADDRESS=mnitta220@gmail.com
 
     - GITLAB_BACKUP_SCHEDULE=daily
     - GITLAB_BACKUP_TIME=01:00
@@ -149,3 +151,53 @@ services:
     - OAUTH_AZURE_API_KEY=
     - OAUTH_AZURE_API_SECRET=
     - OAUTH_AZURE_TENANT_ID=
+
+  redmine:
+    image: redmine:passenger
+    container_name: redmine
+    restart: always
+    ports:
+      - 80:3000
+    environment:
+      TZ: Asia/Tokyo
+      REDMINE_DB_MYSQL: redmine_mysql
+      REDMINE_DB_DATABASE: redmine
+      REDMINE_DB_USERNAME: redmine
+      REDMINE_DB_PASSWORD: redmine
+      REDMINE_DB_ENCODING: utf8mb4
+    depends_on:
+      - redmine_mysql
+      - redmine_memcached
+    volumes:
+      - /var/www/redmine/files:/usr/src/redmine/files
+      - /var/www/redmine/log:/usr/src/redmine/log
+      - /var/www/redmine/plugins:/usr/src/redmine/plugins
+      - /var/www/redmine/public/themes:/usr/src/redmine/public/themes
+
+  redmine_mysql:
+    image: mysql:5.7
+    container_name: redmine_mysql
+    restart: always
+    environment:
+      TZ: Asia/Tokyo
+      MYSQL_ROOT_PASSWORD: P@ssw0rd
+      MYSQL_DATABASE: redmine
+      MYSQL_USER: redmine
+      MYSQL_PASSWORD: redmine
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - /srv/docker/redmine/mysql:/home/data:Z
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+  redmine_memcached:
+    image: memcached
+    container_name: redmine_memcached
+    restart: always
+    ports:
+      - 11211:11211
+
+volumes:
+  mysql-data:
+    name: mysql-redmine
